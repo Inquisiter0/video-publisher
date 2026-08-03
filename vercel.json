@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "https://video-publisher-api.azurewebsites.net/api/:path*" },
-    { "source": "/auth/:path*", "destination": "https://video-publisher-api.azurewebsites.net/auth/:path*" }
-  ]
-}

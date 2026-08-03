@@ -6,3 +6,7 @@ node_modules/
 tmp/
 raw_*.mp4
 processed_*.mp4
+.opencode/
+.postman/
+postman/
+vercel.json
