@@ -1,0 +1,4 @@
+$kind: collection
+description: Postman collection for testing the Video Publisher API endpoints.
+variables:
+  base_url: http://localhost:3000

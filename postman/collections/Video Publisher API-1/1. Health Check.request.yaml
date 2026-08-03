@@ -1,0 +1,5 @@
+$kind: http-request
+description: Checks if the server is running and healthy.
+url: "{{base_url}}/health"
+method: GET
+order: 1000
