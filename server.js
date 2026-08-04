@@ -131,6 +131,8 @@ app.get('/auth/youtube/callback', async (req, res) => {
     if (state !== req.cookies.oauth_state) throw new Error('OAuth state mismatch');
     res.clearCookie('oauth_state');
 
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/youtube/callback';
+
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -138,7 +140,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     });
@@ -203,13 +205,14 @@ app.get('/auth/instagram/callback', async (req, res) => {
 
     const clientId = process.env.INSTAGRAM_CLIENT_ID;
     const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET;
+    const redirectUri = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3000/auth/instagram/callback';
 
     // 1. Exchange the auth code for a short-lived user token.
     const tokenRes = await fetch(
       `https://graph.facebook.com/v19.0/oauth/access_token?${new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: process.env.INSTAGRAM_REDIRECT_URI,
+        redirect_uri: redirectUri,
         code,
       })}`,
     );
