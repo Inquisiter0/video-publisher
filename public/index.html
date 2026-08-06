@@ -37,7 +37,8 @@
       const [previewUrl, setPreviewUrl] = useState(null);
       const [duration, setDuration] = useState(null);
       const [dragActive, setDragActive] = useState(false);
-      const [form, setForm] = useState({ title: '', caption: '', description: '', videoUrl: '' });
+      const [form, setForm] = useState({ title: '', caption: '', description: '' });
+      const [platforms, setPlatforms] = useState({ youtube: true, instagram: true });
       const [privacy, setPrivacy] = useState('private');
       const [publishing, setPublishing] = useState(false);
       const [progress, setProgress] = useState(0);
@@ -89,6 +90,7 @@
       useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
       const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+      const togglePlatform = (k) => setPlatforms((p) => ({ ...p, [k]: !p[k] }));
 
       // ---- publish (XHR for upload progress) ----
       const publish = () => {
@@ -97,6 +99,16 @@
           setErrorMsg('Video exceeds 15 minutes (900s), the maximum limit for Instagram Reels.');
           return;
         }
+
+        const selectedList = [];
+        if (platforms.youtube) selectedList.push('youtube');
+        if (platforms.instagram) selectedList.push('instagram');
+
+        if (selectedList.length === 0) {
+          setErrorMsg('Please select at least one target platform (YouTube Shorts or Instagram Reels).');
+          return;
+        }
+
         setPublishing(true);
         setProgress(0);
         setResult(null);
@@ -107,7 +119,7 @@
         fd.append('title', form.title);
         fd.append('caption', form.caption);
         fd.append('description', form.description);
-        fd.append('videoUrl', form.videoUrl);
+        fd.append('platforms', selectedList.join(','));
         fd.append('privacyStatus', privacy);
         if (duration != null) fd.append('duration', String(Math.round(duration)));
 
@@ -313,8 +325,31 @@
               {/* ---- metadata card ---- */}
               <div className="lg:col-span-2">
                 <Card className="h-full">
-                  <CardHeader step="02" title="Metadata" hint="Applied to both platforms" />
+                  <CardHeader step="02" title="Metadata & Destinations" hint="Configure publishing target" />
                   <div className="space-y-5">
+                    <Field label="Target Platforms">
+                      <div className="grid grid-cols-2 gap-3">
+                        <button type="button" onClick={() => togglePlatform('youtube')}
+                                className={`flex items-center gap-2.5 rounded-2xl border p-3.5 text-xs font-medium transition ${
+                                  platforms.youtube
+                                    ? 'border-red-500/50 bg-red-500/10 text-white'
+                                    : 'border-white/10 bg-white/[0.02] text-zinc-500 hover:border-white/20'
+                                }`}>
+                          <span className={platforms.youtube ? 'text-red-400' : 'text-zinc-500'}><YtIcon /></span>
+                          <span>YouTube Shorts</span>
+                        </button>
+                        <button type="button" onClick={() => togglePlatform('instagram')}
+                                className={`flex items-center gap-2.5 rounded-2xl border p-3.5 text-xs font-medium transition ${
+                                  platforms.instagram
+                                    ? 'border-pink-500/50 bg-pink-500/10 text-white'
+                                    : 'border-white/10 bg-white/[0.02] text-zinc-500 hover:border-white/20'
+                                }`}>
+                          <span className={platforms.instagram ? 'text-pink-400' : 'text-zinc-500'}><IgIcon /></span>
+                          <span>Instagram Reels</span>
+                        </button>
+                      </div>
+                    </Field>
+
                     <Field label="Title">
                       <input value={form.title} onChange={setField('title')} placeholder="My awesome short"
                              className={inputCls} />
@@ -326,10 +361,6 @@
                     <Field label="Description" hint="YouTube">
                       <textarea value={form.description} onChange={setField('description')} rows={3}
                                 placeholder="Description for your Short…" className={`${inputCls} resize-none`} />
-                    </Field>
-                    <Field label="Public video URL" hint="Required by the Graph API for Reels">
-                      <input value={form.videoUrl} onChange={setField('videoUrl')} type="url"
-                             placeholder="https://cdn.example.com/video.mp4" className={inputCls} />
                     </Field>
                     <Field label="Privacy" hint="YouTube">
                       <div className="grid grid-cols-3 gap-2">
@@ -386,6 +417,10 @@
                           Watch on YouTube ↗
                         </a>
                       </>
+                    ) : result.youtube?.skipped ? (
+                      <span className="rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium text-zinc-400">
+                        Skipped ({result.youtube.reason})
+                      </span>
                     ) : (
                       <p className="text-xs text-red-300">{result.youtube?.error || 'Failed'}</p>
                     )}
@@ -399,6 +434,10 @@
                     </div>
                     {result.instagram?.mediaId ? (
                       <p className="font-mono text-sm text-zinc-200">{result.instagram.mediaId}</p>
+                    ) : result.instagram?.skipped ? (
+                      <span className="rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium text-zinc-400">
+                        Skipped ({result.instagram.reason})
+                      </span>
                     ) : (
                       <p className="text-xs text-red-300">{result.instagram?.error || 'Failed'}</p>
                     )}

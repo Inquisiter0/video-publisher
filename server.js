@@ -329,6 +329,8 @@ async function youtubeAccessToken(req, res) {
   return process.env.YOUTUBE_ACCESS_TOKEN;
 }
 
+app.use('/temp', express.static(TMP_DIR));
+
 async function publish(req, res) {
   const rawPath = req.file?.path;
   const processedPath = rawPath
@@ -340,8 +342,6 @@ async function publish(req, res) {
       return res.status(400).json({ error: 'Missing multipart field "video"' });
     }
 
-    // Duration limits: the frontend sends `duration` from HTML5 metadata (seconds).
-    // 900s is the hard cap for Instagram Reels — reject before touching ffmpeg.
     const duration = Number(req.body.duration);
     if (Number.isFinite(duration) && duration > 900) {
       return res.status(400).json({
@@ -349,34 +349,69 @@ async function publish(req, res) {
       });
     }
 
-    // 1. Transcode + center-crop to 1080x1920 (9:16).
-    const processed = await transcodeForVertical(rawPath, processedPath);
-
-    // 2. Tokens: encrypted cookie first, process.env as fallback (cURL/Postman).
+    // Determine target platforms (from checkboxes or default to connected accounts)
+    const reqPlatforms = req.body.platforms ? req.body.platforms.split(',') : [];
+    const ytToken = await youtubeAccessToken(req, res);
     const igCookie = readIgCookie(req) || {};
     const igAccessToken = igCookie.access_token || process.env.INSTAGRAM_ACCESS_TOKEN;
     const igUserId = igCookie.igUserId || process.env.INSTAGRAM_USER_ID;
 
-    // 3. Fan out to both platforms.
-    const [youtube, instagram] = await Promise.allSettled([
-      publishToYouTube(processed, { ...req.body, duration }, await youtubeAccessToken(req, res)),
-      // The Graph API fetches the video server-side, so it needs a public URL.
-      // Missing credentials -> mock/dry-run that always succeeds locally.
-      publishInstagramReel({
-        videoUrl: req.body.videoUrl,
-        caption: req.body.caption ?? '',
-        accessToken: igAccessToken,
-        igUserId,
-      }),
-    ]);
+    const wantYoutube = reqPlatforms.length > 0 ? reqPlatforms.includes('youtube') : (req.body.publishYoutube !== 'false');
+    const wantInstagram = reqPlatforms.length > 0 ? reqPlatforms.includes('instagram') : (req.body.publishInstagram !== 'false');
+
+    // 1. Transcode + center-crop to 1080x1920 (9:16).
+    const processed = await transcodeForVertical(rawPath, processedPath);
+
+    // Build automated public URL for Instagram if needed
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    let host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    if (host.includes('shorts-pulisher.azurewebsites.net') && !host.includes('eastasia-01')) {
+      host = host.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
+    }
+    const autoVideoUrl = req.body.videoUrl || `${proto}://${host}/temp/${path.basename(processed)}`;
+
+    // 2. Prepare promises for requested & connected platforms
+    const tasks = {};
+
+    if (wantYoutube) {
+      if (ytToken) {
+        tasks.youtube = publishToYouTube(processed, { ...req.body, duration }, ytToken);
+      } else {
+        tasks.youtube = Promise.reject(new Error('YouTube account is not connected'));
+      }
+    } else {
+      tasks.youtube = Promise.resolve({ skipped: true, reason: 'Not selected' });
+    }
+
+    if (wantInstagram) {
+      if (igAccessToken && igUserId) {
+        tasks.instagram = publishInstagramReel({
+          videoUrl: autoVideoUrl,
+          caption: req.body.caption ?? '',
+          accessToken: igAccessToken,
+          igUserId,
+        });
+      } else {
+        tasks.instagram = Promise.reject(new Error('Instagram account is not connected'));
+      }
+    } else {
+      tasks.instagram = Promise.resolve({ skipped: true, reason: 'Not selected' });
+    }
+
+    // 3. Fan out
+    const youtubeRes = await Promise.resolve(tasks.youtube).then(
+      (v) => (v?.skipped ? { skipped: true, reason: v.reason } : { videoId: v }),
+      (err) => ({ error: err.message || String(err) }),
+    );
+
+    const instagramRes = await Promise.resolve(tasks.instagram).then(
+      (v) => (v?.skipped ? { skipped: true, reason: v.reason } : { mediaId: v }),
+      (err) => ({ error: err.message || String(err) }),
+    );
 
     return res.status(200).json({
-      youtube: youtube.status === 'fulfilled'
-        ? { videoId: youtube.value }
-        : { error: String(youtube.reason) },
-      instagram: instagram.status === 'fulfilled'
-        ? { mediaId: instagram.value }
-        : { error: String(instagram.reason) },
+      youtube: youtubeRes,
+      instagram: instagramRes,
     });
   } finally {
     // 4. Strict cleanup: BOTH /tmp files are always unlinked, success or error.
