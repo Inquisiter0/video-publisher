@@ -91,10 +91,20 @@ app.use(express.static('public'));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+function getRedirectUri(req, envVarName, defaultPath) {
+  const envVal = process.env[envVarName];
+  if (envVal && !envVal.includes('https://shorts-pulisher.azurewebsites.net/')) {
+    return envVal;
+  }
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return `${proto}://${host}${defaultPath}`;
+}
+
 // --- OAuth: YouTube ---
 app.get('/auth/youtube', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/youtube/callback';
+  const redirectUri = getRedirectUri(req, 'GOOGLE_REDIRECT_URI', '/auth/youtube/callback');
 
   if (!clientId) {
     return res.status(400).send(`
@@ -131,7 +141,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
     if (state !== req.cookies.oauth_state) throw new Error('OAuth state mismatch');
     res.clearCookie('oauth_state');
 
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/youtube/callback';
+    const redirectUri = getRedirectUri(req, 'GOOGLE_REDIRECT_URI', '/auth/youtube/callback');
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -168,7 +178,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
 // --- OAuth: Instagram ---
 app.get('/auth/instagram', (req, res) => {
   const clientId = process.env.INSTAGRAM_CLIENT_ID;
-  const redirectUri = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3000/auth/instagram/callback';
+  const redirectUri = getRedirectUri(req, 'INSTAGRAM_REDIRECT_URI', '/auth/instagram/callback');
 
   if (!clientId) {
     return res.status(400).send(`
@@ -205,7 +215,7 @@ app.get('/auth/instagram/callback', async (req, res) => {
 
     const clientId = process.env.INSTAGRAM_CLIENT_ID;
     const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET;
-    const redirectUri = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3000/auth/instagram/callback';
+    const redirectUri = getRedirectUri(req, 'INSTAGRAM_REDIRECT_URI', '/auth/instagram/callback');
 
     // 1. Exchange the auth code for a short-lived user token.
     const tokenRes = await fetch(
