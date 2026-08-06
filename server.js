@@ -93,7 +93,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 
 function getRedirectUri(req, envVarName, defaultPath) {
   const envVal = process.env[envVarName];
-  if (envVal && !envVal.includes('https://shorts-pulisher.azurewebsites.net/')) {
+  if (envVal && !envVal.includes('shorts-pulisher.azurewebsites.net')) {
     return envVal;
   }
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
