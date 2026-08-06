@@ -2,7 +2,7 @@
 
 A stateless, full-stack video processing and distribution engine built with **Node.js**, **Express**, **FFmpeg**, **YouTube Data API v3**, and the **Meta Instagram Graph API**.
 
-Upload raw videos of any aspect ratio, automatically transcode them into standard **9:16 vertical short-form videos (1080x1920)**, and publish them seamlessly to **YouTube Shorts** and **Instagram Reels** with single-click target platform controls.
+Upload raw videos of any aspect ratio, automatically transcode them into standard **9:16 vertical short-form videos (1080x1920)**, and publish them seamlessly to **YouTube Shorts** and **Instagram Reels**, with single-click target platform controls.
 
 ---
 
