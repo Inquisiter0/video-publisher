@@ -1,41 +1,41 @@
 # Automated Short-Video Publisher 🎥
 
-A stateless, full-stack video processing and automated distribution platform built with **Node.js**, **Express**, **FFmpeg**, **YouTube Data API v3**, and the **Meta Instagram Graph API**.
+A stateless, full-stack video processing and distribution engine built with **Node.js**, **Express**, **FFmpeg**, **YouTube Data API v3**, and the **Meta Instagram Graph API**.
 
-It allows users to upload raw videos of any aspect ratio, automatically transcodes them into standard **9:16 vertical short-form videos (1080x1920)**, and publishes them seamlessly to **YouTube Shorts** and **Instagram Reels**.
-
----
-
-## 🌟 Key Features
-
-* **Automated 9:16 Transcoding Engine**: Converts any video format or aspect ratio into a centered 1080x1920 H.264/AAC MP4 optimized for short-form mobile feeds using **FFmpeg**.
-* **Dual-Platform Distribution**: Single-click automated publishing to YouTube Shorts and Instagram Reels.
-* **YouTube Resumable Chunked Uploads**: Implements YouTube's resumable upload protocol (`PUT` requests with `Content-Range` headers) to handle large video uploads reliably.
-* **Instagram Container & Polling Pipeline**: Handles Meta's 3-step async container flow (Create Media Container -> Poll Status -> Publish Container).
-* **Stateless & Auto-Cleaned**: Uploaded raw videos and transcoded outputs are automatically unlinked from server temporary storage after processing.
-* **AES-256-GCM Cookie Security**: Uses authenticated AES-256-GCM encryption for storing OAuth access/refresh tokens in `HttpOnly`, `SameSite=Strict` cookies.
+Upload raw videos of any aspect ratio, automatically transcode them into standard **9:16 vertical short-form videos (1080x1920)**, and publish them seamlessly to **YouTube Shorts** and **Instagram Reels** with single-click target platform controls.
 
 ---
 
-## 📐 Architecture & Data Flow
+## 🌟 Highlights
+
+* 🎬 **Automated 9:16 FFmpeg Transcoding**: Scale and center-crop any input video into standard 1080x1920 H.264/AAC MP4 optimized for vertical mobile feeds (`yuv420p` + `+faststart`).
+* 🎯 **Flexible Target Platform Selection**: Select YouTube Shorts, Instagram Reels, or both simultaneously without hardcoded constraints.
+* ⚡ **Resumable Chunked YouTube Uploads**: Implements YouTube's resumable upload protocol (`PUT` requests with `Content-Range` headers) for high-reliability video transfers.
+* 🔄 **Automated Instagram Container Flow**: Self-hosts processed videos on temporary server routes for Meta's 3-step async container pipeline (Create -> Poll -> Publish), eliminating manual URL inputs.
+* 🔐 **AES-256-GCM Cookie Encryption**: Stateless session management storing OAuth access and refresh tokens inside encrypted `HttpOnly`, `SameSite=Strict` cookies.
+* 🧹 **Auto-Cleaning & Stateless**: Processed media files and temporary uploads are automatically unlinked immediately post-publish.
+
+---
+
+## 📐 Architecture & System Flow
 
 ```mermaid
 flowchart TD
-    A[Client Web App / Dashboard] -->|1. Upload Raw Video & Metadata| B[Express.js Server]
-    B -->|2. Disk Storage| C[OS Temp Directory]
-    C -->|3. Transcode to 9:16| D[FFmpeg Pipeline]
-    D -->|Scale 1080x1920 & Crop| E[Optimized MP4 Output]
+    A[Client Web Dashboard] -->|1. Upload Raw MP4 & Target Platforms| B[Express Server]
+    B -->|2. Save Raw Upload| C[OS Temp Storage]
+    C -->|3. Transcode to 9:16| D[FFmpeg Engine]
+    D -->|Center-Crop 1080x1920| E[Processed MP4 Output]
     
-    subgraph Publishing Engine
+    subgraph Distribution Pipeline
         E -->|4a. Resumable Chunked Upload| F[YouTube Data API v3]
-        E -->|4b. Container Creation & Async Polling| G[Meta Instagram Graph API]
+        E -->|4b. Auto Temp URL & Async Container| G[Meta Instagram Graph API]
     end
     
-    F -->|5a. Return Video ID| B
-    G -->|5b. Return Media ID| B
+    F -->|5a. YouTube Video ID| B
+    G -->|5b. Instagram Media ID| B
     
-    B -->|6. Unlink Temp Files| C
-    B -->|7. Publish Results| A
+    B -->|6. Immediate Temp File Unlink| C
+    B -->|7. Display Status Results| A
 ```
 
 ---
@@ -43,11 +43,11 @@ flowchart TD
 ## 🛠️ Tech Stack
 
 * **Backend Engine**: Node.js, Express.js
-* **Media Processing**: FFmpeg (`ffmpeg-static`)
-* **File Processing**: Multer (disk storage stream limits)
-* **Security & Auth**: OAuth 2.0 (Google & Meta), AES-256-GCM encrypted cookies (`node:crypto`)
-* **Frontend**: HTML5, Vanilla JavaScript, Tailwind CSS (Glassmorphism UI)
-* **Deployment**: Azure App Service
+* **Media Transcoding**: FFmpeg (`ffmpeg-static`), Node Child Process streams
+* **Security & Auth**: OAuth 2.0 (Google & Meta), AES-256-GCM authenticated encryption (`node:crypto`)
+* **File Uploads**: Multer stream validation
+* **Frontend**: HTML5, Vanilla JavaScript, Tailwind CSS (Glassmorphism Dashboard)
+* **Deployment**: Azure App Service / Node Environment
 
 ---
 
@@ -58,30 +58,31 @@ flowchart TD
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/auth/youtube` | Initiates Google OAuth 2.0 flow with YouTube upload scopes |
-| `GET` | `/auth/youtube/callback` | OAuth callback endpoint; exchanges code for tokens & sets encrypted cookie |
+| `GET` | `/auth/youtube/callback` | OAuth callback; exchanges code for tokens & sets encrypted cookie |
 | `GET` | `/auth/instagram` | Initiates Meta OAuth 2.0 flow for Instagram Business accounts |
-| `GET` | `/auth/instagram/callback` | Meta OAuth callback endpoint; exchanges code for long-lived access token |
+| `GET` | `/auth/instagram/callback` | Meta OAuth callback; exchanges code for long-lived access token |
 | `GET` | `/api/auth-status` | Returns authentication state for YouTube and Instagram |
 
-### Publishing & System Routes
+### Publishing & Core Routes
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/health` | Server health check endpoint |
-| `POST` | `/api/publish` | Uploads raw video, transcodes to 9:16, and publishes to selected platforms |
+| `POST` | `/api/publish` | Transcodes video to 9:16 and publishes to selected target platforms |
+| `GET` | `/temp/:filename` | Serves processed videos temporarily for Meta Graph API container fetching |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Local Setup & Development
 
 ### Prerequisites
 
 * **Node.js** (v18 or higher)
 * **npm**
-* **Google Cloud Console Project** with YouTube Data API v3 enabled
-* **Meta for Developers App** with Instagram Graph API permissions
+* **Google Cloud Console Project** with **YouTube Data API v3** enabled
+* **Meta for Developers App** with **Instagram Graph API** permissions
 
-### 1. Clone & Install Dependencies
+### 1. Clone & Install
 
 ```bash
 git clone https://github.com/Inquisiter0/video-publisher.git
@@ -89,9 +90,9 @@ cd video-publisher
 npm install
 ```
 
-### 2. Environment Configuration
+### 2. Configure Environment Variables
 
-Create a `.env` file in the project root directory:
+Create a `.env` file in the project root:
 
 ```env
 PORT=3000
@@ -108,21 +109,21 @@ INSTAGRAM_CLIENT_SECRET=your_instagram_app_secret
 INSTAGRAM_REDIRECT_URI=http://localhost:3000/auth/instagram/callback
 ```
 
-### 3. Run Locally
+### 3. Run Application
 
 ```bash
 npm start
 ```
 
-The application will start on `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
 ## 🔒 Security & Privacy
 
-* No user credentials or API tokens are stored in a persistent database.
-* All session tokens are encrypted at rest inside `HttpOnly` cookies using AES-256-GCM encryption.
-* Media files are temporarily stored in system OS temp folders (`os.tmpdir()`) and purged immediately post-publish.
+* **Zero Persistent Database**: Tokens are stored strictly inside encrypted client cookies.
+* **Authenticated Encryption**: Uses AES-256-GCM with SHA-256 key derivation for cookie token protection.
+* **Ephemeral File Lifecycle**: Media files are automatically purged post-publish to guarantee zero data retention.
 
 ---
 

@@ -92,19 +92,11 @@ app.use(express.static('public'));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 function getRedirectUri(req, envVarName, defaultPath) {
-  let envVal = process.env[envVarName];
-  if (envVal && envVal.includes('shorts-pulisher.azurewebsites.net') && !envVal.includes('eastasia-01')) {
-    envVal = envVal.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
-    return envVal;
-  }
-  if (envVal && !envVal.includes('shorts-pulisher.azurewebsites.net')) {
-    return envVal;
+  if (process.env[envVarName]) {
+    return process.env[envVarName];
   }
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  let host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
-  if (host.includes('shorts-pulisher.azurewebsites.net') && !host.includes('eastasia-01')) {
-    host = host.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
-  }
+  const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
   return `${proto}://${host}${defaultPath}`;
 }
 
@@ -364,10 +356,7 @@ async function publish(req, res) {
 
     // Build automated public URL for Instagram if needed
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    let host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
-    if (host.includes('shorts-pulisher.azurewebsites.net') && !host.includes('eastasia-01')) {
-      host = host.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
-    }
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
     const autoVideoUrl = req.body.videoUrl || `${proto}://${host}/temp/${path.basename(processed)}`;
 
     // 2. Prepare promises for requested & connected platforms
