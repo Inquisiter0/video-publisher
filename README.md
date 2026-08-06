@@ -47,7 +47,7 @@ flowchart TD
 * **File Processing**: Multer (disk storage stream limits)
 * **Security & Auth**: OAuth 2.0 (Google & Meta), AES-256-GCM encrypted cookies (`node:crypto`)
 * **Frontend**: HTML5, Vanilla JavaScript, Tailwind CSS (Glassmorphism UI)
-* **Deployment**: Azure App Service / Vercel
+* **Deployment**: Azure App Service
 
 ---
 

@@ -9,4 +9,5 @@ processed_*.mp4
 .opencode/
 .postman/
 postman/
+vercel.json
 todo.md
