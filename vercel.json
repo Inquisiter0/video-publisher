@@ -1,0 +1,7 @@
+{
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net/api/:path*" },
+    { "source": "/auth/:path*", "destination": "https://shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net/auth/:path*" }
+  ]
+}
