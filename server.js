@@ -118,7 +118,7 @@ app.get('/auth/youtube', (req, res) => {
   }
 
   const state = randomUUID();
-  res.cookie('oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  res.cookie('yt_oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -137,8 +137,8 @@ app.get('/auth/youtube/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
     if (!code) throw new Error('Missing authorization code');
-    if (state !== req.cookies.oauth_state) throw new Error('OAuth state mismatch');
-    res.clearCookie('oauth_state');
+    if (state !== req.cookies.yt_oauth_state) throw new Error('OAuth state mismatch');
+    res.clearCookie('yt_oauth_state');
 
     const redirectUri = getRedirectUri(req, 'GOOGLE_REDIRECT_URI', '/auth/youtube/callback');
 
@@ -192,7 +192,7 @@ app.get('/auth/instagram', (req, res) => {
   }
 
   const state = randomUUID();
-  res.cookie('oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  res.cookie('ig_oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -209,8 +209,8 @@ app.get('/auth/instagram/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
     if (!code) throw new Error('Missing authorization code');
-    if (state !== req.cookies.oauth_state) throw new Error('OAuth state mismatch');
-    res.clearCookie('oauth_state');
+    if (state !== req.cookies.ig_oauth_state) throw new Error('OAuth state mismatch');
+    res.clearCookie('ig_oauth_state');
 
     const clientId = process.env.INSTAGRAM_CLIENT_ID;
     const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET;
