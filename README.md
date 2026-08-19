@@ -1,6 +1,8 @@
-# Automated Short-Video Publisher 🎥
+# Automated Short-Video Publisher & QA Test Suite 🎥
 
-A stateless, full-stack video processing and distribution engine built with **Node.js**, **Express**, **FFmpeg**, **YouTube Data API v3**, and the **Meta Instagram Graph API**.
+![Deploy & Test Pipeline](https://github.com/Inquisiter0/video-publisher/workflows/Deploy%20Node.js%20App%20to%20Azure/badge.svg)
+
+A stateless, full-stack video processing and distribution engine built with **Node.js**, **Express**, **FFmpeg**, **YouTube Data API v3**, and the **Meta Instagram Graph API**, paired with an **automated Quality Assurance & API testing framework**.
 
 Upload raw videos of any aspect ratio, automatically transcode them into standard **9:16 vertical short-form videos (1080x1920)**, and publish them seamlessly to **YouTube Shorts** and **Instagram Reels**, with single-click target platform controls.
 
@@ -70,6 +72,28 @@ flowchart TD
 | `GET` | `/health` | Server health check endpoint |
 | `POST` | `/api/publish` | Transcodes video to 9:16 and publishes to selected target platforms |
 | `GET` | `/temp/:filename` | Serves processed videos temporarily for Meta Graph API container fetching |
+
+---
+
+## 🧪 Automated Testing & Quality Assurance
+
+This repository incorporates a lightweight, automated Quality Assurance (QA) suite designed to validate API contracts, security header policies, and input boundary conditions.
+
+### Test Coverage Highlights
+
+* 🟢 **Health & Contract Validation**: Verifies HTTP 200 responses, status payloads, and timestamp formats on `/health`.
+* 🔐 **Security & Cookie Verification**: Validates `HttpOnly` and `SameSite=Strict` cookie settings for OAuth state cookies (`yt_oauth_state`, `ig_oauth_state`) to prevent OAuth state collisions.
+* 🛑 **Boundary & Input Validation**: Validates 400 Bad Request error handling when `/api/publish` receives missing or malformed video payloads.
+* ⚙️ **CI/CD Quality Gate**: Continuous integration pipeline (`.github/workflows/test.yml`) running automated regression tests on every push and pull request.
+* 📬 **Postman Collection**: Pre-configured API workspace collection available in [`lib/postman`](lib/postman).
+
+### Executing Automated Tests
+
+Run the test suite locally using the native test runner:
+
+```bash
+npm test
+```
 
 ---
 

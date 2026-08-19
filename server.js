@@ -421,6 +421,11 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ error: err.message });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`[publisher] listening on :${process.env.PORT || 3000} (tmp: ${TMP_DIR})`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(process.env.PORT || 3000, () => {
+    console.log(`[publisher] listening on :${process.env.PORT || 3000} (tmp: ${TMP_DIR})`);
+  });
+}
+
