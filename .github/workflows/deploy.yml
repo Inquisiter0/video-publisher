@@ -24,6 +24,10 @@ jobs:
 
       - name: Run automated test suite
         run: npm test
+        env:
+          NODE_ENV: test
+          GOOGLE_CLIENT_ID: test_google_client_id
+          INSTAGRAM_CLIENT_ID: test_instagram_client_id
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
