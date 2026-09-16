@@ -206,7 +206,7 @@ app.get('/auth/instagram', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+    scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
     state,
   });
 
