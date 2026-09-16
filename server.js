@@ -364,6 +364,17 @@ app.get('/api/auth-status', (req, res) => {
   });
 });
 
+// --- Disconnect endpoints (clear cookies so user can re-auth with new scopes) ---
+app.get('/auth/instagram/disconnect', (_req, res) => {
+  res.clearCookie('ig_token');
+  res.redirect('/');
+});
+
+app.get('/auth/youtube/disconnect', (_req, res) => {
+  res.clearCookie('yt_token');
+  res.redirect('/');
+});
+
 // Invoke the Multer middleware manually so a failed parse can still unlink any
 // partially-written file before bubbling to the central error handler.
 app.post('/api/publish', (req, res, next) => {

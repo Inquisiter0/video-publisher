@@ -175,18 +175,32 @@
               </div>
 
               <div className="flex items-center gap-2">
-                {!auth.youtubeConnected && (
+                {!auth.youtubeConnected ? (
                   <a href={`${API}/auth/youtube`}
                      className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-zinc-300 transition hover:border-red-500/40 hover:bg-red-500/[0.06] hover:text-white">
                     <span className="text-red-500"><YtIcon /></span>
                     Connect YouTube
                   </a>
+                ) : (
+                  <a href={`${API}/auth/youtube/disconnect`}
+                     className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-[10px] text-zinc-500 transition hover:border-red-500/30 hover:text-zinc-300"
+                     title="Disconnect YouTube and re-authenticate">
+                    <span className="text-red-400"><YtIcon /></span>
+                    Reconnect
+                  </a>
                 )}
-                {!auth.instagramConnected && (
+                {!auth.instagramConnected ? (
                   <a href={`${API}/auth/instagram`}
                      className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-zinc-300 transition hover:border-pink-500/40 hover:bg-pink-500/[0.06] hover:text-white">
                     <span className="text-pink-400"><IgIcon /></span>
                     Connect Instagram
+                  </a>
+                ) : (
+                  <a href={`${API}/auth/instagram/disconnect`}
+                     className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-[10px] text-zinc-500 transition hover:border-pink-500/30 hover:text-zinc-300"
+                     title="Disconnect Instagram and re-authenticate">
+                    <span className="text-pink-400"><IgIcon /></span>
+                    Reconnect
                   </a>
                 )}
                 <span className="rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-black shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_8px_24px_rgba(255,255,255,0.08)]">
