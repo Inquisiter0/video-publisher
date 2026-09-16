@@ -92,11 +92,18 @@ app.use(express.static('public'));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 function getRedirectUri(req, envVarName, defaultPath) {
-  if (process.env[envVarName]) {
-    return process.env[envVarName];
+  let envVal = process.env[envVarName];
+  if (envVal) {
+    if (envVal.includes('shorts-pulisher.azurewebsites.net') && !envVal.includes('eastasia-01')) {
+      return envVal.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
+    }
+    return envVal;
   }
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+  let host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+  if (host.includes('shorts-pulisher.azurewebsites.net') && !host.includes('eastasia-01')) {
+    host = host.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
+  }
   return `${proto}://${host}${defaultPath}`;
 }
 
@@ -198,7 +205,7 @@ app.get('/auth/instagram', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+    scope: 'instagram_business_basic,instagram_business_content_publish',
     state,
   });
 
