@@ -404,6 +404,7 @@ async function publish(req, res) {
     const reqPlatforms = req.body.platforms ? req.body.platforms.split(',') : [];
     const ytToken = await youtubeAccessToken(req, res);
     const igCookie = readIgCookie(req) || {};
+    const igAccessToken = igCookie.access_token || process.env.INSTAGRAM_ACCESS_TOKEN;
     let igUserId = igCookie.igUserId || process.env.INSTAGRAM_USER_ID;
     if (!igUserId && igAccessToken) {
       igUserId = await resolveIgUserId(igAccessToken);
