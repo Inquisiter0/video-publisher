@@ -269,21 +269,72 @@ app.get('/auth/instagram/callback', async (req, res) => {
 });
 
 async function resolveIgUserId(accessToken) {
+  if (!accessToken) return undefined;
+
+  // Path 1: Query graph.instagram.com directly
+  try {
+    const igRes = await fetch(`https://graph.instagram.com/me?fields=user_id,id,username&access_token=${accessToken}`);
+    if (igRes.ok) {
+      const igData = await igRes.json();
+      const id = igData.user_id || igData.id;
+      if (id) {
+        console.log('[IG resolve] Found ID directly from graph.instagram.com:', id);
+        return String(id);
+      }
+    }
+  } catch (_) {}
+
+  // Path 2: Query /me with nested accounts
+  try {
+    const meRes = await fetch(
+      `https://graph.facebook.com/v19.0/me?fields=id,name,accounts{id,name,instagram_business_account}&access_token=${accessToken}`,
+    );
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      const pages = meData.accounts?.data || [];
+      for (const page of pages) {
+        if (page.instagram_business_account?.id) {
+          console.log('[IG resolve] Found ID from /me?fields=accounts:', page.instagram_business_account.id);
+          return String(page.instagram_business_account.id);
+        }
+      }
+    }
+  } catch (_) {}
+
+  // Path 3: Query /accounts explicitly and check each page directly
   try {
     const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id&access_token=${accessToken}`);
     if (!meRes.ok) return undefined;
     const { id } = await meRes.json();
 
     const accRes = await fetch(
-      `https://graph.facebook.com/v19.0/${id}/accounts?fields=instagram_business_account&access_token=${accessToken}`,
+      `https://graph.facebook.com/v19.0/${id}/accounts?fields=id,name,instagram_business_account&access_token=${accessToken}`,
     );
-    if (!accRes.ok) return undefined;
-    const { data } = await accRes.json();
+    if (accRes.ok) {
+      const { data } = await accRes.json();
+      for (const page of (data || [])) {
+        if (page.instagram_business_account?.id) {
+          console.log('[IG resolve] Found ID from /accounts:', page.instagram_business_account.id);
+          return String(page.instagram_business_account.id);
+        }
+        // Direct page query
+        try {
+          const pageRes = await fetch(
+            `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${accessToken}`,
+          );
+          if (pageRes.ok) {
+            const pageData = await pageRes.json();
+            if (pageData.instagram_business_account?.id) {
+              console.log('[IG resolve] Found ID from direct page query:', pageData.instagram_business_account.id);
+              return String(pageData.instagram_business_account.id);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
 
-    return data?.[0]?.instagram_business_account?.id || undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 // --- Connection status ---
@@ -353,8 +404,10 @@ async function publish(req, res) {
     const reqPlatforms = req.body.platforms ? req.body.platforms.split(',') : [];
     const ytToken = await youtubeAccessToken(req, res);
     const igCookie = readIgCookie(req) || {};
-    const igAccessToken = igCookie.access_token || process.env.INSTAGRAM_ACCESS_TOKEN;
-    const igUserId = igCookie.igUserId || process.env.INSTAGRAM_USER_ID;
+    let igUserId = igCookie.igUserId || process.env.INSTAGRAM_USER_ID;
+    if (!igUserId && igAccessToken) {
+      igUserId = await resolveIgUserId(igAccessToken);
+    }
 
     const wantYoutube = reqPlatforms.length > 0 ? reqPlatforms.includes('youtube') : (req.body.publishYoutube !== 'false');
     const wantInstagram = reqPlatforms.length > 0 ? reqPlatforms.includes('instagram') : (req.body.publishInstagram !== 'false');
