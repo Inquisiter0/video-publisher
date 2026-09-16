@@ -88,6 +88,7 @@ const app = express();
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/temp', express.static(TMP_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
@@ -363,47 +364,49 @@ async function publish(req, res) {
 
     // Build automated public URL for Instagram if needed
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    let host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    if (host.includes('shorts-pulisher.azurewebsites.net') && !host.includes('eastasia-01')) {
+      host = host.replace('shorts-pulisher.azurewebsites.net', 'shorts-pulisher-fvg2c3dngpcaffd7.eastasia-01.azurewebsites.net');
+    }
     const autoVideoUrl = req.body.videoUrl || `${proto}://${host}/temp/${path.basename(processed)}`;
 
-    // 2. Prepare promises for requested & connected platforms
-    const tasks = {};
-
+    // 2. Execute platform tasks independently with zero unhandled rejections
+    let youtubeRes;
     if (wantYoutube) {
       if (ytToken) {
-        tasks.youtube = publishToYouTube(processed, { ...req.body, duration }, ytToken);
+        try {
+          const videoId = await publishToYouTube(processed, { ...req.body, duration }, ytToken);
+          youtubeRes = { videoId };
+        } catch (err) {
+          youtubeRes = { error: err.message || String(err) };
+        }
       } else {
-        tasks.youtube = Promise.reject(new Error('YouTube account is not connected'));
+        youtubeRes = { skipped: true, reason: 'YouTube account is not connected' };
       }
     } else {
-      tasks.youtube = Promise.resolve({ skipped: true, reason: 'Not selected' });
+      youtubeRes = { skipped: true, reason: 'Not selected' };
     }
 
+    let instagramRes;
     if (wantInstagram) {
       if (igAccessToken && igUserId) {
-        tasks.instagram = publishInstagramReel({
-          videoUrl: autoVideoUrl,
-          caption: req.body.caption ?? '',
-          accessToken: igAccessToken,
-          igUserId,
-        });
+        try {
+          const mediaId = await publishInstagramReel({
+            videoUrl: autoVideoUrl,
+            caption: req.body.caption ?? '',
+            accessToken: igAccessToken,
+            igUserId,
+          });
+          instagramRes = { mediaId };
+        } catch (err) {
+          instagramRes = { error: err.message || String(err) };
+        }
       } else {
-        tasks.instagram = Promise.reject(new Error('Instagram account is not connected'));
+        instagramRes = { skipped: true, reason: 'Instagram account is not connected' };
       }
     } else {
-      tasks.instagram = Promise.resolve({ skipped: true, reason: 'Not selected' });
+      instagramRes = { skipped: true, reason: 'Not selected' };
     }
-
-    // 3. Fan out
-    const youtubeRes = await Promise.resolve(tasks.youtube).then(
-      (v) => (v?.skipped ? { skipped: true, reason: v.reason } : { videoId: v }),
-      (err) => ({ error: err.message || String(err) }),
-    );
-
-    const instagramRes = await Promise.resolve(tasks.instagram).then(
-      (v) => (v?.skipped ? { skipped: true, reason: v.reason } : { mediaId: v }),
-      (err) => ({ error: err.message || String(err) }),
-    );
 
     return res.status(200).json({
       youtube: youtubeRes,
