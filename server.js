@@ -206,7 +206,7 @@ app.get('/auth/instagram', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'instagram_content_publish',
+    scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
     state,
   });
 
@@ -269,71 +269,88 @@ app.get('/auth/instagram/callback', async (req, res) => {
 });
 
 async function resolveIgUserId(accessToken) {
-  if (!accessToken) return undefined;
+  if (!accessToken) { console.log('[IG resolve] No access token provided'); return undefined; }
 
   // Path 1: Query graph.instagram.com directly
   try {
+    console.log('[IG resolve] Path 1: trying graph.instagram.com/me ...');
     const igRes = await fetch(`https://graph.instagram.com/me?fields=user_id,id,username&access_token=${accessToken}`);
+    const igText = await igRes.text();
+    console.log('[IG resolve] Path 1 status:', igRes.status, 'body:', igText);
     if (igRes.ok) {
-      const igData = await igRes.json();
+      const igData = JSON.parse(igText);
       const id = igData.user_id || igData.id;
       if (id) {
-        console.log('[IG resolve] Found ID directly from graph.instagram.com:', id);
+        console.log('[IG resolve] ✅ Found ID from Path 1:', id);
         return String(id);
       }
     }
-  } catch (_) {}
+  } catch (e) { console.log('[IG resolve] Path 1 error:', e.message); }
 
   // Path 2: Query /me with nested accounts
   try {
+    console.log('[IG resolve] Path 2: trying /me?fields=accounts ...');
     const meRes = await fetch(
       `https://graph.facebook.com/v19.0/me?fields=id,name,accounts{id,name,instagram_business_account}&access_token=${accessToken}`,
     );
+    const meText = await meRes.text();
+    console.log('[IG resolve] Path 2 status:', meRes.status, 'body:', meText);
     if (meRes.ok) {
-      const meData = await meRes.json();
+      const meData = JSON.parse(meText);
       const pages = meData.accounts?.data || [];
+      console.log('[IG resolve] Path 2 found', pages.length, 'page(s)');
       for (const page of pages) {
+        console.log('[IG resolve] Page:', page.id, page.name, 'ig_biz:', JSON.stringify(page.instagram_business_account));
         if (page.instagram_business_account?.id) {
-          console.log('[IG resolve] Found ID from /me?fields=accounts:', page.instagram_business_account.id);
+          console.log('[IG resolve] ✅ Found ID from Path 2:', page.instagram_business_account.id);
           return String(page.instagram_business_account.id);
         }
       }
     }
-  } catch (_) {}
+  } catch (e) { console.log('[IG resolve] Path 2 error:', e.message); }
 
   // Path 3: Query /accounts explicitly and check each page directly
   try {
+    console.log('[IG resolve] Path 3: trying /me then /accounts ...');
     const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id&access_token=${accessToken}`);
-    if (!meRes.ok) return undefined;
-    const { id } = await meRes.json();
+    const meText = await meRes.text();
+    console.log('[IG resolve] Path 3 /me status:', meRes.status, 'body:', meText);
+    if (!meRes.ok) { console.log('[IG resolve] Path 3 /me failed'); return undefined; }
+    const { id } = JSON.parse(meText);
 
     const accRes = await fetch(
       `https://graph.facebook.com/v19.0/${id}/accounts?fields=id,name,instagram_business_account&access_token=${accessToken}`,
     );
+    const accText = await accRes.text();
+    console.log('[IG resolve] Path 3 /accounts status:', accRes.status, 'body:', accText);
     if (accRes.ok) {
-      const { data } = await accRes.json();
+      const { data } = JSON.parse(accText);
       for (const page of (data || [])) {
+        console.log('[IG resolve] Path 3 page:', page.id, page.name, 'ig_biz:', JSON.stringify(page.instagram_business_account));
         if (page.instagram_business_account?.id) {
-          console.log('[IG resolve] Found ID from /accounts:', page.instagram_business_account.id);
+          console.log('[IG resolve] ✅ Found ID from Path 3:', page.instagram_business_account.id);
           return String(page.instagram_business_account.id);
         }
-        // Direct page query
+        // Direct page query as last resort
         try {
           const pageRes = await fetch(
             `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${accessToken}`,
           );
+          const pageText = await pageRes.text();
+          console.log('[IG resolve] Path 3 direct page query:', page.id, 'status:', pageRes.status, 'body:', pageText);
           if (pageRes.ok) {
-            const pageData = await pageRes.json();
+            const pageData = JSON.parse(pageText);
             if (pageData.instagram_business_account?.id) {
-              console.log('[IG resolve] Found ID from direct page query:', pageData.instagram_business_account.id);
+              console.log('[IG resolve] ✅ Found ID from Path 3 direct:', pageData.instagram_business_account.id);
               return String(pageData.instagram_business_account.id);
             }
           }
-        } catch (_) {}
+        } catch (e) { console.log('[IG resolve] Path 3 direct page error:', e.message); }
       }
     }
-  } catch (_) {}
+  } catch (e) { console.log('[IG resolve] Path 3 error:', e.message); }
 
+  console.log('[IG resolve] ❌ All paths failed — igUserId is undefined');
   return undefined;
 }
 
