@@ -198,11 +198,11 @@ app.get('/auth/instagram', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'instagram_business_basic,instagram_business_content_publish',
+    scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
     state,
   });
 
-  res.redirect(`https://api.instagram.com/oauth/authorize?${params}`);
+  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?${params}`);
 });
 
 app.get('/auth/instagram/callback', async (req, res) => {
