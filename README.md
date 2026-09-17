@@ -85,7 +85,6 @@ This repository incorporates a lightweight, automated Quality Assurance (QA) sui
 * 🔐 **Security & Cookie Verification**: Validates `HttpOnly` and `SameSite=Strict` cookie settings for OAuth state cookies (`yt_oauth_state`, `ig_oauth_state`) to prevent OAuth state collisions.
 * 🛑 **Boundary & Input Validation**: Validates 400 Bad Request error handling when `/api/publish` receives missing or malformed video payloads.
 * ⚙️ **CI/CD Quality Gate**: Continuous integration pipeline (`.github/workflows/test.yml`) running automated regression tests on every push and pull request.
-* 📬 **Postman Collection**: Pre-configured API workspace collection available in [`lib/postman`](lib/postman).
 
 ### Executing Automated Tests
 
