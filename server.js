@@ -452,43 +452,35 @@ async function publish(req, res) {
     }
     const autoVideoUrl = req.body.videoUrl || `${proto}://${host}/temp/${path.basename(processed)}`;
 
-    // 2. Execute platform tasks independently with zero unhandled rejections
-    let youtubeRes;
-    if (wantYoutube) {
-      if (ytToken) {
-        try {
-          const videoId = await publishToYouTube(processed, { ...req.body, duration }, ytToken);
-          youtubeRes = { videoId };
-        } catch (err) {
-          youtubeRes = { error: err.message || String(err) };
-        }
-      } else {
-        youtubeRes = { skipped: true, reason: 'YouTube account is not connected' };
+    // 2. Execute platform tasks IN PARALLEL to stay within Azure 230s timeout
+    const ytPromise = (async () => {
+      if (!wantYoutube) return { skipped: true, reason: 'Not selected' };
+      if (!ytToken) return { skipped: true, reason: 'YouTube account is not connected' };
+      try {
+        const videoId = await publishToYouTube(processed, { ...req.body, duration }, ytToken);
+        return { videoId };
+      } catch (err) {
+        return { error: err.message || String(err) };
       }
-    } else {
-      youtubeRes = { skipped: true, reason: 'Not selected' };
-    }
+    })();
 
-    let instagramRes;
-    if (wantInstagram) {
-      if (igAccessToken && igUserId) {
-        try {
-          const mediaId = await publishInstagramReel({
-            videoUrl: autoVideoUrl,
-            caption: req.body.caption ?? '',
-            accessToken: igAccessToken,
-            igUserId,
-          });
-          instagramRes = { mediaId };
-        } catch (err) {
-          instagramRes = { error: err.message || String(err) };
-        }
-      } else {
-        instagramRes = { skipped: true, reason: 'Instagram account is not connected' };
+    const igPromise = (async () => {
+      if (!wantInstagram) return { skipped: true, reason: 'Not selected' };
+      if (!igAccessToken || !igUserId) return { skipped: true, reason: 'Instagram account is not connected' };
+      try {
+        const mediaId = await publishInstagramReel({
+          videoUrl: autoVideoUrl,
+          caption: req.body.caption ?? '',
+          accessToken: igAccessToken,
+          igUserId,
+        });
+        return { mediaId };
+      } catch (err) {
+        return { error: err.message || String(err) };
       }
-    } else {
-      instagramRes = { skipped: true, reason: 'Not selected' };
-    }
+    })();
+
+    const [youtubeRes, instagramRes] = await Promise.all([ytPromise, igPromise]);
 
     return res.status(200).json({
       youtube: youtubeRes,
