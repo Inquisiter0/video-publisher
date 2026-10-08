@@ -18,9 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --omit=dev --prefer-offline --no-audit --no-fund
 
       - name: Run automated test suite
         run: npm test
@@ -29,8 +30,13 @@ jobs:
           GOOGLE_CLIENT_ID: test_google_client_id
           INSTAGRAM_CLIENT_ID: test_instagram_client_id
 
+      - name: Build slim deploy package (skip node_modules, tests, git)
+        run: |
+          zip -r release.zip server.js lib public package.json package-lock.json
+          # Let Oryx reinstall on Azure from package-lock instead of uploading 100MB+ node_modules (ffmpeg-static binary)
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          package: release.zip

@@ -87,8 +87,8 @@ const app = express();
 
 app.use(cookieParser());
 app.use(express.json());
-app.use(express.static('public'));
-app.use('/temp', express.static(TMP_DIR));
+app.use(express.static('public', { maxAge: '1d', etag: true }));
+app.use('/temp', express.static(TMP_DIR, { maxAge: '1h' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
@@ -407,8 +407,6 @@ async function youtubeAccessToken(req, res) {
   }
   return process.env.YOUTUBE_ACCESS_TOKEN;
 }
-
-app.use('/temp', express.static(TMP_DIR));
 
 async function publish(req, res) {
   const rawPath = req.file?.path;
